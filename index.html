@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loup-Garou - Narrateur Local</title>
     <link rel="stylesheet" href="visuel.css">
 </head>
@@ -12,7 +12,7 @@
     <div class="app-container">
         <section id="screen-players" class="screen active">
             <h1 class="main-title">Lou Garou</h1>
-            <p class="flavor-text">Gestion des rôles</p>
+            <p class="flavor-text">Gestion des villageois</p>
             
             <div class="input-group">
                 <input type="text" id="new-player-name" placeholder="Nom du joueur..." onkeypress="if(event.key === 'Enter') addPlayer()">
@@ -42,24 +42,34 @@
 
         <section id="screen-reveal" class="screen">
             <h2 id="reveal-instruction">Au tour de...</h2>
-            <div class="card-reveal-box" onclick="toggleRoleVisibility()">
-                <div id="card-inner" class="card-inner">
-                    <div class="card-front">?</div>
-                    <div class="card-back">
-                        <span id="role-emoji"></span>
-                        <h3 id="role-name">Rôle</h3>
-                        <p id="role-desc"></p>
+            <div class="reveal-container">
+                <div class="card-reveal-box" onclick="toggleRoleVisibility()">
+                    <div id="card-inner" class="card-inner">
+                        <div class="card-front">?</div>
+                        <div class="card-back">
+                            <span id="role-emoji"></span>
+                            <h3 id="role-name">Rôle</h3>
+                            <p id="role-desc"></p>
+                        </div>
                     </div>
                 </div>
+                <p class="tap-hint">Clique sur la carte pour la voir/cacher</p>
             </div>
-            <p class="tap-hint">Clique sur la carte pour la voir/cacher</p>
             <button id="next-player-btn" class="btn btn-primary" onclick="nextPlayer()" style="display:none;">Joueur suivant</button>
+        </section>
+
+        <section id="screen-mj-transition" class="screen">
+            <h1 class="main-title">MAÎTRE DU JEU</h1>
+            <p class="flavor-text">Le dernier joueur doit donner l'Iphone au Maître du Jeu.</p>
+            <div class="transition-icon">🎭</div>
+            <button class="btn btn-primary" onclick="showMasterScreen()">Accéder au tableau de bord</button>
         </section>
 
         <section id="screen-master" class="screen">
             <h2>Tableau de bord</h2>
+            <p class="mj-hint">Cliquez sur un joueur pour changer son statut (Vivant/Mort)</p>
             <div id="game-summary" class="list-scroll"></div>
-            <button class="btn btn-primary" onclick="showScreen('screen-players')">Nouvelle partie</button>
+            <button class="btn btn-primary" onclick="confirmRestart()">Nouvelle partie</button>
         </section>
     </div>
 
@@ -80,7 +90,6 @@
 
         let selectedCounts = {};
 
-        // --- CHARGEMENT INITIAL ---
         window.onload = () => {
             const savedPlayers = localStorage.getItem('lg_players');
             if (savedPlayers) {
@@ -89,7 +98,6 @@
             }
         };
 
-        // --- GESTION DES JOUEURS ---
         function addPlayer() {
             const input = document.getElementById('new-player-name');
             const name = input.value.trim();
@@ -130,7 +138,6 @@
             document.getElementById('player-count').innerText = players.length;
         }
 
-        // --- LOGIQUE DE JEU ---
         function checkPlayers() {
             if (players.length < 4) return alert("Il faut au moins 4 joueurs !");
             showScreen('screen-roles');
@@ -173,7 +180,7 @@
             deck = [];
             for (let id in selectedCounts) {
                 for (let i = 0; i < selectedCounts[id]; i++) {
-                    deck.push({...allRoles.find(r => r.id === id)});
+                    deck.push({...allRoles.find(r => r.id === id), alive: true});
                 }
             }
             deck.sort(() => Math.random() - 0.5);
@@ -206,6 +213,17 @@
             if (currentRevealIndex < players.length) {
                 prepareReveal();
             } else {
+                showScreen('screen-mj-transition');
+            }
+        }
+
+        function toggleLife(index) {
+            const player = players[index];
+            const isCurrentlyAlive = deck[index].alive;
+            const message = isCurrentlyAlive ? `Éliminer ${player} ?` : `Ressusciter ${player} ?`;
+            
+            if (confirm(message)) {
+                deck[index].alive = !isCurrentlyAlive;
                 showMasterScreen();
             }
         }
@@ -214,8 +232,20 @@
             showScreen('screen-master');
             const summary = document.getElementById('game-summary');
             summary.innerHTML = players.map((p, i) => `
-                <div class="summary-item"><strong>${p}</strong> : ${deck[i].emoji} ${deck[i].name}</div>
+                <div class="summary-item ${deck[i].alive ? '' : 'is-dead'}" onclick="toggleLife(${i})">
+                    <div class="summary-content">
+                        <strong>${p}</strong> 
+                        <span>${deck[i].emoji} ${deck[i].name}</span>
+                    </div>
+                    <div class="status-badge">${deck[i].alive ? 'VIVANT' : 'MORT'}</div>
+                </div>
             `).join('');
+        }
+
+        function confirmRestart() {
+            if (confirm("Voulez-vous vraiment quitter cette partie et en recommencer une nouvelle ?")) {
+                showScreen('screen-players');
+            }
         }
 
         function showScreen(id) {
