@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loup-Garou - Narrateur Local</title>
+    <link rel="stylesheet" href="visuel.css">
+</head>
+<body>
+    <div class="background-overlay"></div>
+    
+    <div class="app-container">
+        <section id="screen-players" class="screen active">
+            <h1 class="main-title">Lou Garou</h1>
+            <p class="flavor-text">Gestion des rôles</p>
+            
+            <div class="input-group">
+                <input type="text" id="new-player-name" placeholder="Nom du joueur..." onkeypress="if(event.key === 'Enter') addPlayer()">
+                <button class="btn-add" onclick="addPlayer()">+</button>
+            </div>
+
+            <div class="player-management">
+                <div class="list-header">
+                    <span>Joueurs (<span id="player-count">0</span>)</span>
+                    <button class="btn-clear" onclick="clearAllPlayers()">Tout effacer</button>
+                </div>
+                <ul id="players-list-ui" class="list-scroll"></ul>
+            </div>
+
+            <button class="btn btn-primary" onclick="checkPlayers()">Passer aux rôles</button>
+        </section>
+
+        <section id="screen-roles" class="screen">
+            <h2>Composition du village</h2>
+            <div id="roles-config" class="list-scroll"></div>
+            <div class="setup-footer">
+                <p>Cartes à distribuer : <strong id="role-count">0</strong> / <span id="target-count">0</span></p>
+                <button class="btn btn-primary" onclick="distributeRoles()">Distribuer les rôles</button>
+                <button class="btn-link" onclick="showScreen('screen-players')">Retour aux joueurs</button>
+            </div>
+        </section>
+
+        <section id="screen-reveal" class="screen">
+            <h2 id="reveal-instruction">Au tour de...</h2>
+            <div class="card-reveal-box" onclick="toggleRoleVisibility()">
+                <div id="card-inner" class="card-inner">
+                    <div class="card-front">?</div>
+                    <div class="card-back">
+                        <span id="role-emoji"></span>
+                        <h3 id="role-name">Rôle</h3>
+                        <p id="role-desc"></p>
+                    </div>
+                </div>
+            </div>
+            <p class="tap-hint">Clique sur la carte pour la voir/cacher</p>
+            <button id="next-player-btn" class="btn btn-primary" onclick="nextPlayer()" style="display:none;">Joueur suivant</button>
+        </section>
+
+        <section id="screen-master" class="screen">
+            <h2>Tableau de bord</h2>
+            <div id="game-summary" class="list-scroll"></div>
+            <button class="btn btn-primary" onclick="showScreen('screen-players')">Nouvelle partie</button>
+        </section>
+    </div>
+
+    <script>
+        let players = [];
+        let deck = [];
+        let currentRevealIndex = 0;
+        let isCardVisible = false;
+
+        const allRoles = [
+            { id: 'loup', name: 'Loup-Garou', emoji: '🐺', desc: 'Dévore un villageois chaque nuit.' },
+            { id: 'voyante', name: 'Voyante', emoji: '🔮', desc: 'Découvre une identité chaque nuit.' },
+            { id: 'sorciere', name: 'Sorcière', emoji: '🧪', desc: 'Possède deux potions.' },
+            { id: 'chasseur', name: 'Chasseur', emoji: '🏹', desc: 'Tire une balle à sa mort.' },
+            { id: 'cupidon', name: 'Cupidon', emoji: '💘', desc: 'Lie deux joueurs.' },
+            { id: 'villageois', name: 'Villageois', emoji: '👨‍🌾', desc: 'Cherche les loups.' }
+        ];
+
+        let selectedCounts = {};
+
+        // --- CHARGEMENT INITIAL ---
+        window.onload = () => {
+            const savedPlayers = localStorage.getItem('lg_players');
+            if (savedPlayers) {
+                players = JSON.parse(savedPlayers);
+                updatePlayersUI();
+            }
+        };
+
+        // --- GESTION DES JOUEURS ---
+        function addPlayer() {
+            const input = document.getElementById('new-player-name');
+            const name = input.value.trim();
+            if (name && !players.includes(name)) {
+                players.push(name);
+                input.value = "";
+                savePlayers();
+                updatePlayersUI();
+            }
+        }
+
+        function savePlayers() {
+            localStorage.setItem('lg_players', JSON.stringify(players));
+        }
+
+        function clearAllPlayers() {
+            if(confirm("Effacer tous les joueurs ?")) {
+                players = [];
+                savePlayers();
+                updatePlayersUI();
+            }
+        }
+
+        function deletePlayer(index) {
+            players.splice(index, 1);
+            savePlayers();
+            updatePlayersUI();
+        }
+
+        function updatePlayersUI() {
+            const ui = document.getElementById('players-list-ui');
+            ui.innerHTML = players.map((p, i) => `
+                <li>
+                    <span>${p}</span>
+                    <button class="delete-btn" onclick="deletePlayer(${i})">Supprimer</button>
+                </li>
+            `).join('');
+            document.getElementById('player-count').innerText = players.length;
+        }
+
+        // --- LOGIQUE DE JEU ---
+        function checkPlayers() {
+            if (players.length < 4) return alert("Il faut au moins 4 joueurs !");
+            showScreen('screen-roles');
+            document.getElementById('target-count').innerText = players.length;
+            renderRolesConfig();
+        }
+
+        function renderRolesConfig() {
+            const container = document.getElementById('roles-config');
+            container.innerHTML = allRoles.map(role => `
+                <div class="role-item">
+                    <span>${role.emoji} ${role.name}</span>
+                    <div class="counter">
+                        <button onclick="changeCount('${role.id}', -1)">-</button>
+                        <span id="q-${role.id}">${selectedCounts[role.id] || 0}</span>
+                        <button onclick="changeCount('${role.id}', 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+            updateRoleCount();
+        }
+
+        function changeCount(id, delta) {
+            selectedCounts[id] = Math.max(0, (selectedCounts[id] || 0) + delta);
+            document.getElementById(`q-${id}`).innerText = selectedCounts[id];
+            updateRoleCount();
+        }
+
+        function updateRoleCount() {
+            const total = Object.values(selectedCounts).reduce((a, b) => a + b, 0);
+            const display = document.getElementById('role-count');
+            display.innerText = total;
+            display.style.color = (total === players.length) ? "#2ecc71" : "#e74c3c";
+        }
+
+        function distributeRoles() {
+            const totalCards = Object.values(selectedCounts).reduce((a, b) => a + b, 0);
+            if (totalCards !== players.length) return alert(`Ajuste les rôles : tu as ${players.length} joueurs mais ${totalCards} cartes.`);
+
+            deck = [];
+            for (let id in selectedCounts) {
+                for (let i = 0; i < selectedCounts[id]; i++) {
+                    deck.push({...allRoles.find(r => r.id === id)});
+                }
+            }
+            deck.sort(() => Math.random() - 0.5);
+            
+            currentRevealIndex = 0;
+            showScreen('screen-reveal');
+            prepareReveal();
+        }
+
+        function prepareReveal() {
+            isCardVisible = false;
+            document.getElementById('card-inner').classList.remove('flipped');
+            document.getElementById('reveal-instruction').innerText = `Passe l'Iphone à : ${players[currentRevealIndex]}`;
+            document.getElementById('next-player-btn').style.display = "none";
+            
+            const role = deck[currentRevealIndex];
+            document.getElementById('role-emoji').innerText = role.emoji;
+            document.getElementById('role-name').innerText = role.name;
+            document.getElementById('role-desc').innerText = role.desc;
+        }
+
+        function toggleRoleVisibility() {
+            isCardVisible = !isCardVisible;
+            document.getElementById('card-inner').classList.toggle('flipped');
+            if (isCardVisible) document.getElementById('next-player-btn').style.display = "block";
+        }
+
+        function nextPlayer() {
+            currentRevealIndex++;
+            if (currentRevealIndex < players.length) {
+                prepareReveal();
+            } else {
+                showMasterScreen();
+            }
+        }
+
+        function showMasterScreen() {
+            showScreen('screen-master');
+            const summary = document.getElementById('game-summary');
+            summary.innerHTML = players.map((p, i) => `
+                <div class="summary-item"><strong>${p}</strong> : ${deck[i].emoji} ${deck[i].name}</div>
+            `).join('');
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+    </script>
+</body>
+</html>

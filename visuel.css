@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Raleway:wght@400;600&display=swap');
+
+:root {
+    --blood: #8b0000;
+    --gold: #d4af37;
+    --bg: #0a0a0c;
+    --card-bg: #1c1c1f;
+}
+
+body {
+    margin: 0; font-family: 'Raleway', sans-serif;
+    background: var(--bg); color: #eee;
+    height: 100vh; display: flex; justify-content: center; align-items: center;
+}
+
+.background-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle, #2a0505 0%, #0a0a0c 100%);
+    z-index: -1;
+}
+
+.app-container { width: 95%; max-width: 420px; text-align: center; }
+
+.screen { display: none; animation: fadeIn 0.3s forwards; }
+.screen.active { display: block; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+h1 { font-family: 'Cinzel', serif; color: var(--blood); font-size: 2.2rem; margin-bottom: 5px; }
+.flavor-text { color: var(--gold); font-size: 0.85rem; font-style: italic; margin-bottom: 25px; }
+
+/* Listes & Scroll */
+.list-scroll {
+    max-height: 320px; overflow-y: auto;
+    background: rgba(0,0,0,0.4); border-radius: 12px;
+    padding: 15px; margin-bottom: 20px; border: 1px solid #333;
+}
+
+ul { list-style: none; padding: 0; margin: 0; }
+li { 
+    padding: 12px; border-bottom: 1px solid #2a2a2a; 
+    display: flex; justify-content: space-between; align-items: center; 
+}
+
+.delete-btn { background: none; border: 1px solid #555; color: #888; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+.delete-btn:hover { border-color: var(--blood); color: var(--blood); }
+
+/* Inputs & Boutons */
+.input-group { display: flex; gap: 8px; margin-bottom: 20px; }
+input { flex: 1; padding: 14px; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; font-size: 1rem; }
+
+.btn { padding: 16px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+.btn-primary { background: var(--blood); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+.btn-primary:hover { background: #a00000; transform: scale(1.02); }
+
+.btn-add { background: var(--gold); border: none; width: 50px; border-radius: 8px; cursor: pointer; font-size: 1.5rem; }
+.btn-clear { background: none; border: none; color: #888; cursor: pointer; text-decoration: underline; font-size: 0.8rem; }
+.btn-link { background: none; border: none; color: #888; text-decoration: underline; margin-top: 15px; cursor: pointer; }
+
+/* Sélecteur de Rôles */
+.role-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.counter { display: flex; align-items: center; gap: 15px; }
+.counter button { width: 30px; height: 30px; border-radius: 6px; border: none; background: #333; color: #fff; cursor: pointer; }
+
+/* Carte Reveal */
+.card-reveal-box { width: 220px; height: 320px; margin: 20px auto; perspective: 1000px; cursor: pointer; }
+.card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+.card-inner.flipped { transform: rotateY(180deg); }
+
+.card-front, .card-back {
+    position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+    border-radius: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    border: 3px solid var(--gold);
+}
+
+.card-front { background: var(--card-bg); font-size: 5rem; color: var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.card-back { background: var(--blood); transform: rotateY(180deg); padding: 20px; text-align: center; }
+
+#role-emoji { font-size: 4rem; margin-bottom: 10px; }
+.tap-hint { font-size: 0.8rem; color: #777; margin-top: 10px; }
+
+.summary-item { background: #1a1a1a; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 4px solid var(--gold); text-align: left; font-size: 0.9rem; }
